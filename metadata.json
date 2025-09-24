@@ -1,0 +1,7 @@
+{
+  "name": "Copy of Interior Design Visualization AI",
+  "description": "An application to visualize furniture and other products in your room using AI.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
