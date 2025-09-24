@@ -34,6 +34,7 @@ const App = () => {
   const [loadingMessage, setLoadingMessage] = useState(loadingMessages[0]);
   const [error, setError] = useState<string | null>(null);
   const [previousState, setPreviousState] = useState<{ displayImage: string | null; placedProducts: Product[] } | null>(null);
+  const [userInstructions, setUserInstructions] = useState('');
 
 
   const workspaceRef = useRef<HTMLDivElement>(null);
@@ -100,8 +101,6 @@ const App = () => {
               return { src: url, description: 'a product' };
           }
 
-          // FIX: The `contents` property expects an array of Content objects.
-          // The object was wrapped in an array to match the expected type.
           const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: [{
@@ -283,10 +282,15 @@ const App = () => {
       const compositeImageData = canvas.toDataURL('image/jpeg').split(',')[1];
       
       const productDescriptions = placedProducts.map(p => p.description).join(', ');
-      const promptText = `Your task is to seamlessly integrate the following product(s) into the provided room image: ${productDescriptions}. It is absolutely critical that you DO NOT change the size, position, or aspect ratio of the added product(s). The products are placed exactly where the user wants them. Your only job is to adjust lighting, shadows, and colors to make the products look like they naturally belong in the room. Preserve all other details of the original image. Do not hallucinate and add any products that the user did not place in the room.`;
+      
+      let promptText = `Your task is to seamlessly integrate the following product(s) into the provided room image: ${productDescriptions}. Your main goal is to make the products look natural by adjusting lighting, shadows, and colors. Preserve all other details of the original image. Do not add any products that the user did not place.`;
 
-      // FIX: The `contents` property expects an array of Content objects.
-      // The object was wrapped in an array to match the expected type.
+      if (userInstructions.trim() !== '') {
+        promptText += `\n\nIMPORTANT USER INSTRUCTIONS: "${userInstructions.trim()}". You MUST follow these instructions. This may require you to change the orientation or perspective of the product(s) significantly. For example, if the user asks to make a sofa flush against the back wall, you must rotate it to face forward and align its perspective with that wall. The size and general position provided by the user should be respected as much as possible while fulfilling the instruction.`;
+      } else {
+        promptText += `\n\nIt is absolutely critical that you DO NOT change the size, position, or aspect ratio of the added product(s). The products are placed exactly where the user wants them. Your only job is to adjust lighting, shadows, and colors to make the products look like they naturally belong in the room. You may only make very subtle adjustments to the perspective to better align the product with the scene if necessary.`;
+      }
+
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image-preview',
         contents: [{
@@ -337,6 +341,32 @@ const App = () => {
             </label>
           )}
         </div>
+
+        {originalRoomImage && (
+            // <div className="space-y-2">
+            //     <h2 className="font-semibold text-gray-800">Special Instructions</h2>
+            //     <p className="text-xs text-gray-500">e.g., "Rotate the armchair to be flush against the back wall."</p>
+            //     <textarea
+            //       className="w-full h-24 p-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+            //       placeholder="Tell the AI how to orient the products..."
+            //       value={userInstructions}
+            //       onChange={(e) => setUserInstructions(e.target.value)}
+            //       aria-label="Special instructions for AI"
+            //     />
+            // </div>
+            <div className="space-y-2">
+  <h2 className="font-semibold text-gray-800">Special Instructions</h2>
+  <p className="text-xs text-gray-500">e.g., "Rotate the armchair to be flush against the back wall."</p>
+  <textarea
+    className="w-full h-24 p-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+    placeholder="Tell the AI how to orient the products..."
+    value={userInstructions}
+    onChange={(e) => setUserInstructions(e.target.value)}
+    aria-label="Special instructions for AI"
+  />
+</div>
+
+        )}
 
         <div className="flex-grow overflow-y-auto border-t pt-4">
             <h2 className="font-semibold mb-2">Your Products</h2>
